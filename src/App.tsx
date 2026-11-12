@@ -1,19 +1,9 @@
-import { useMemo, useState } from 'react'
-import { PLATFORMS, type PlatformId } from './data/platforms'
-import { CategoryPicker } from './components/CategoryPicker'
-import { buildNudeVistaQuery, buildPlainQuery, type NudeVistaQueryInput } from './lib/query'
-
-const emptyNudeVistaQuery: NudeVistaQueryInput = {
-  allWords: '',
-  exactPhrase: '',
-  anyWords: '',
-  noneWords: '',
-  includeSite: '',
-  excludeSite: '',
-  category: '',
-  longerThan: '',
-  shorterThan: '',
-}
+import { useMemo, useRef, useState, type FormEvent } from 'react'
+import { searchSepiaVideos } from './api/sepiasearch'
+import { TagFilters } from './components/TagFilters'
+import { VideoCard } from './components/VideoCard'
+import { collectTagFacets, filterVideosByTags, getEligibleVideos } from './lib/video-filters'
+import type { SepiaVideo } from './types/sepiasearch'
 
 function BrandMark() {
   return (
@@ -25,252 +15,243 @@ function BrandMark() {
   )
 }
 
-function ExternalIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M11 3h6v6M17 3l-8 8" />
-      <path d="M15 11v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4" />
-    </svg>
-  )
+function SearchIcon() {
+  return <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" /><path d="m13 13 4 4" /></svg>
 }
 
-function CopyIcon() {
+function AgeGate({ onConfirm }: { onConfirm: () => void }) {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <rect x="7" y="7" width="10" height="10" rx="2" />
-      <path d="M13 5V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h1" />
-    </svg>
-  )
-}
-
-function Field({
-  id,
-  label,
-  hint,
-  value,
-  onChange,
-  placeholder,
-  type = 'text',
-}: {
-  id: string
-  label: string
-  hint?: string
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  type?: 'text' | 'search'
-}) {
-  return (
-    <label className="field" htmlFor={id}>
-      <span className="field-label">{label}{hint && <span className="field-hint-label">{hint}</span>}</span>
-      <input id={id} type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
-    </label>
+    <main className="age-gate">
+      <section className="age-gate__card" role="dialog" aria-modal="true" aria-labelledby="age-title">
+        <BrandMark />
+        <span className="age-gate__pill">18+</span>
+        <p className="eyebrow">ROTA SEARCH · PEERTUBE</p>
+        <h1 id="age-title">Conteúdo adulto</h1>
+        <p>Este portal apresenta buscas de vídeos sinalizados como conteúdo sexual explícito. Continue somente se tiver 18 anos ou mais e se isso for legal na sua região.</p>
+        <button className="button button--primary age-gate__continue" type="button" onClick={onConfirm}>Tenho 18 anos ou mais — continuar</button>
+        <p className="age-gate__footnote">A confirmação vale apenas para esta aba e não é salva.</p>
+      </section>
+    </main>
   )
 }
 
 function App() {
-  const [activeSource, setActiveSource] = useState<PlatformId>('nudevista')
-  const [plainQuery, setPlainQuery] = useState('')
-  const [nudeVistaQuery, setNudeVistaQuery] = useState<NudeVistaQueryInput>(emptyNudeVistaQuery)
-  const [selectedCategoryTerms, setSelectedCategoryTerms] = useState<string[]>([])
-  const [copyNotice, setCopyNotice] = useState('')
+  const [ageConfirmed, setAgeConfirmed] = useState(false)
+  const [queryInput, setQueryInput] = useState('')
+  const [submittedQuery, setSubmittedQuery] = useState('')
+  const [rawVideos, setRawVideos] = useState<SepiaVideo[]>([])
+  const [total, setTotal] = useState(0)
+  const [nextStart, setNextStart] = useState(0)
+  const [includedTags, setIncludedTags] = useState<string[]>([])
+  const [excludedTags, setExcludedTags] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState('')
+  const [loadMoreError, setLoadMoreError] = useState('')
+  const requestRef = useRef<AbortController | null>(null)
+  const requestIdRef = useRef(0)
 
-  const platform = PLATFORMS.find((item) => item.id === activeSource) ?? PLATFORMS[0]
-  const selectedKeywords = selectedCategoryTerms.join(' ')
-  const nudeVistaResult = useMemo(() => buildNudeVistaQuery({
-    ...nudeVistaQuery,
-    allWords: [nudeVistaQuery.allWords, selectedKeywords].filter(Boolean).join(' '),
-  }), [nudeVistaQuery, selectedKeywords])
-  const plainQueryWithCategories = useMemo(
-    () => buildPlainQuery([plainQuery, selectedKeywords].filter(Boolean).join(' ')),
-    [plainQuery, selectedKeywords],
+  const eligibleVideos = useMemo(() => getEligibleVideos(rawVideos), [rawVideos])
+  const visibleVideos = useMemo(
+    () => filterVideosByTags(eligibleVideos, includedTags, excludedTags),
+    [eligibleVideos, includedTags, excludedTags],
   )
-  const queryToCopy = activeSource === 'nudevista'
-    ? nudeVistaResult.query
-    : activeSource === 'pornmd'
-      ? plainQueryWithCategories
-      : ''
-  const validationErrors = activeSource === 'nudevista' ? nudeVistaResult.errors : []
+  const tagFacets = useMemo(() => collectTagFacets(eligibleVideos), [eligibleVideos])
+  const hiddenCount = Math.max(0, rawVideos.length - eligibleVideos.length)
+  const canLoadMore = submittedQuery.length > 0 && nextStart < total && rawVideos.length > 0
 
-  function updateNudeVistaField<K extends keyof NudeVistaQueryInput>(key: K, value: NudeVistaQueryInput[K]) {
-    setNudeVistaQuery((current) => ({ ...current, [key]: value }))
-    setCopyNotice('')
-  }
+  async function fetchPage(query: string, start: number, append: boolean) {
+    requestRef.current?.abort()
+    const controller = new AbortController()
+    requestRef.current = controller
+    const requestId = ++requestIdRef.current
 
-  function toggleCategoryTerm(item: string) {
-    setSelectedCategoryTerms((current) => current.includes(item)
-      ? current.filter((selected) => selected !== item)
-      : [...current, item])
-    setCopyNotice('')
-  }
-
-  function clearCategoryTerms() {
-    setSelectedCategoryTerms([])
-    setCopyNotice('')
-  }
-
-  function selectSource(id: PlatformId) {
-    setActiveSource(id)
-    setCopyNotice('')
-  }
-
-  async function copyQuery() {
-    if (validationErrors.length > 0) {
-      setCopyNotice('Corrija os campos indicados antes de copiar.')
-      return
+    if (append) {
+      setLoadingMore(true)
+      setLoadMoreError('')
+    } else {
+      setSubmittedQuery(query)
+      setRawVideos([])
+      setTotal(0)
+      setNextStart(0)
+      setIncludedTags([])
+      setExcludedTags([])
+      setError('')
+      setLoadMoreError('')
+      setLoading(true)
+      setLoadingMore(false)
     }
-    if (!queryToCopy) {
-      setCopyNotice(activeSource === 'pornmd' ? 'Digite um termo para montar a consulta.' : 'Preencha ao menos um campo para montar a consulta.')
-      return
-    }
+
     try {
-      if (!navigator.clipboard?.writeText) throw new Error('clipboard unavailable')
-      await navigator.clipboard.writeText(queryToCopy)
-      setCopyNotice('Consulta copiada. Cole-a manualmente no site de destino.')
-    } catch {
-      setCopyNotice('Não foi possível copiar automaticamente. Selecione o texto acima e use a opção Copiar do navegador.')
+      const page = await searchSepiaVideos({ query, start, signal: controller.signal })
+      if (requestId !== requestIdRef.current) return
+      setRawVideos((current) => {
+        if (!append) return page.data
+        const seen = new Set(current.map((video) => video.uuid))
+        return [...current, ...page.data.filter((video) => !seen.has(video.uuid))]
+      })
+      setTotal(page.total)
+      setNextStart(page.rawCount === 0 ? page.total : start + page.rawCount)
+    } catch (cause) {
+      if (controller.signal.aborted || requestId !== requestIdRef.current) return
+      const message = cause instanceof Error ? cause.message : 'Ocorreu um erro inesperado na busca.'
+      if (append) setLoadMoreError(message)
+      else setError(message)
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setLoading(false)
+        setLoadingMore(false)
+      }
     }
   }
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const query = queryInput.trim()
+    if (!query) {
+      setError('Digite um termo para buscar.')
+      return
+    }
+    if (query.length > 200) {
+      setError('Use até 200 caracteres no termo de busca.')
+      return
+    }
+    void fetchPage(query, 0, false)
+  }
+
+  function handleLoadMore() {
+    if (!canLoadMore || loading || loadingMore) return
+    void fetchPage(submittedQuery, nextStart, true)
+  }
+
+  function toggleIncluded(tag: string) {
+    setIncludedTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag])
+    setExcludedTags((current) => current.filter((item) => item !== tag))
+  }
+
+  function toggleExcluded(tag: string) {
+    setExcludedTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag])
+    setIncludedTags((current) => current.filter((item) => item !== tag))
+  }
+
+  function clearTagFilters() {
+    setIncludedTags([])
+    setExcludedTags([])
+  }
+
+  if (!ageConfirmed) return <AgeGate onConfirm={() => setAgeConfirmed(true)} />
 
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#inicio" aria-label="Rota, início">
+        <a className="brand" href="#top" aria-label="Rota Search, início">
           <BrandMark />
-          <span className="brand-name">ROTA<span> / BUSCA MANUAL</span></span>
+          <span className="brand-name">ROTA<span> / SEARCH</span></span>
         </a>
-        <div className="topbar-meta"><span className="status-dot" /> SEM RESULTADOS INTERNOS</div>
+        <div className="topbar-meta"><span className="status-dot" /> ÍNDICE PEERTUBE · SEPIASEARCH</div>
       </header>
 
-      <main id="inicio">
+      <main id="top">
         <section className="hero" aria-labelledby="hero-title">
           <div className="hero-copy">
-            <p className="eyebrow"><span>01</span> PORTAL DE BUSCA EXTERNA <span className="age-pill">18+</span></p>
-            <h1 id="hero-title">Sua consulta.<br /><em>Sua fonte.</em></h1>
-            <p className="hero-description">Monte uma consulta local e escolha onde continuar. Este portal não acessa, coleta nem exibe vídeos ou resultados.</p>
+            <p className="eyebrow"><span className="eyebrow-index">BUSCA FEDERADA</span><span className="age-pill">18+</span></p>
+            <h1 id="hero-title">Encontre vídeos.<br /><em>Refine por tags.</em></h1>
+            <p className="hero-description">Busque no índice SepiaSearch e refine os resultados pelas tags reais dos vídeos públicos sinalizados como explícitos.</p>
           </div>
-          <div className="hero-mark" aria-hidden="true"><BrandMark /><span>ABRA<br />NA FONTE</span></div>
+          <div className="hero-stamp" aria-hidden="true"><span>PEER<br />TUBE</span><b>↗</b></div>
         </section>
 
-        <section className="notice" aria-label="Aviso de conteúdo">
+        <section className="notice" aria-label="Aviso de conteúdo e privacidade">
           <span className="notice-tag">18+</span>
-          <p>Destinado somente a adultos. Os sites externos podem exibir conteúdo explícito e aplicam suas próprias regras e verificações. O portal Rota não hospeda nem indexa conteúdo.</p>
+          <p><strong>Apenas adultos.</strong> São exibidos registros marcados como públicos e com a flag `EXPLICIT_SEX`. A consulta vai ao SepiaSearch somente quando você buscar; o player conecta à instância original apenas após clique.</p>
         </section>
 
-        <section className="source-section" aria-labelledby="source-heading">
-          <div className="section-heading">
-            <div><p className="eyebrow"><span>02</span> ESCOLHA O DESTINO</p><h2 id="source-heading">Onde você quer pesquisar?</h2></div>
-            <p className="section-side-note">A busca é feita manualmente no site escolhido.</p>
+        <section className="search-section" aria-labelledby="search-title">
+          <div className="search-section__heading">
+            <div><p className="eyebrow"><span className="eyebrow-index">01</span> PESQUISA</p><h2 id="search-title">O que você procura?</h2></div>
+            <span className="index-badge"><span className="status-dot" /> ÍNDICE AGREGADO</span>
           </div>
+          <form className="search-form" onSubmit={handleSearch}>
+            <label className="sr-only" htmlFor="search-query">Termo de busca</label>
+            <SearchIcon />
+            <input
+              id="search-query"
+              type="search"
+              value={queryInput}
+              onChange={(event) => setQueryInput(event.target.value)}
+              maxLength={200}
+              placeholder="Ex.: ruiva, redhead…"
+              autoComplete="off"
+            />
+            <button type="submit" disabled={loading}>{loading ? 'Buscando…' : 'Buscar vídeos'}</button>
+          </form>
+          <p className="search-privacy-note">O termo digitado é enviado ao SepiaSearch ao tocar em Buscar. Não fica salvo neste portal.</p>
+          {error && <p className="inline-error" role="alert">{error}</p>}
+        </section>
 
-          <div className="source-tabs" role="group" aria-label="Buscadores externos">
-            {PLATFORMS.map((item, index) => (
-              <button
-                className={`source-tab ${activeSource === item.id ? 'source-tab--active' : ''} ${item.status === 'inactive' ? 'source-tab--legacy' : ''}`}
-                key={item.id}
-                type="button"
-                aria-pressed={activeSource === item.id}
-                onClick={() => selectSource(item.id)}
-              >
-                <span className="source-tab-number">0{index + 1}</span>
-                <span className="source-tab-name">{item.name}</span>
-                <span className="source-tab-state">{item.status === 'inactive' ? 'ENCERRADO' : 'LINK EXTERNO'}</span>
-              </button>
-            ))}
-          </div>
+        <section className="results-area" aria-label="Resultados e filtros">
+          <aside className="filters-column">
+            {submittedQuery ? (
+              <TagFilters
+                key={submittedQuery}
+                tags={tagFacets}
+                included={includedTags}
+                excluded={excludedTags}
+                onInclude={toggleIncluded}
+                onExclude={toggleExcluded}
+                onClear={clearTagFilters}
+              />
+            ) : (
+              <div className="filter-empty-card"><span className="filter-empty-card__number">02</span><h2>Tags dinâmicas</h2><p>Faça uma busca. As opções de incluir e excluir serão extraídas somente dos resultados elegíveis.</p></div>
+            )}
+            <div className="eligibility-note"><span aria-hidden="true">i</span><p>“Público” não informa preços externos. As regras de acesso do vídeo pertencem à instância que o hospeda.</p></div>
+          </aside>
 
-          <div className="source-panel" id="source-panel" role="region" aria-label={`Busca manual — ${platform.name}`}>
-            <div className="source-intro">
-              <div>
-                <p className="eyebrow">FONTE SELECIONADA <span className="source-domain">{platform.domain}</span></p>
-                <h3>{platform.name}</h3>
-                <p className="source-description">{platform.description}</p>
-              </div>
-              {platform.status === 'active' && <span className="manual-badge"><span className="status-dot" /> MANUAL</span>}
+          <section className="results-column" aria-labelledby="results-title">
+            <div className="results-heading">
+              <div><p className="eyebrow"><span className="eyebrow-index">03</span> RESULTADOS</p><h2 id="results-title">{submittedQuery ? `Busca: “${submittedQuery}”` : 'Vídeos públicos'}</h2></div>
+              {submittedQuery && !loading && <span className="result-count" role="status">{visibleVideos.length} exibidos · {eligibleVideos.length} elegíveis carregados</span>}
             </div>
 
-            {activeSource !== 'findtubes' && (
-              <CategoryPicker selected={selectedCategoryTerms} onToggle={toggleCategoryTerm} onClear={clearCategoryTerms} />
+            {!submittedQuery && (
+              <div className="results-placeholder"><div className="placeholder-mark"><SearchIcon /></div><h3>Comece com um termo de busca</h3><p>Os resultados e suas tags aparecem aqui. Nenhum vídeo é carregado antes da sua busca.</p></div>
             )}
+            {loading && <div className="loading-state" role="status"><span className="loading-spinner" />Buscando no índice SepiaSearch…</div>}
+            {!loading && error && <div className="state-card state-card--error"><h3>Não foi possível buscar</h3><p>{error}</p><button type="button" className="button button--secondary" onClick={() => { if (submittedQuery) void fetchPage(submittedQuery, 0, false) }}>Tentar novamente</button></div>}
+            {!loading && !error && submittedQuery && rawVideos.length === 0 && <div className="state-card"><h3>Nenhum resultado retornado</h3><p>Tente outro termo ou uma grafia alternativa.</p></div>}
+            {!loading && !error && submittedQuery && rawVideos.length > 0 && eligibleVideos.length === 0 && <div className="state-card"><h3>Não há vídeos elegíveis nesta página</h3><p>Somente registros públicos com flag `EXPLICIT_SEX` são exibidos. A marcação depende da instância ou de quem publicou o vídeo.</p></div>}
+            {!loading && !error && submittedQuery && eligibleVideos.length > 0 && visibleVideos.length === 0 && <div className="state-card"><h3>Nenhum vídeo corresponde às tags</h3><p>Remova ou altere os filtros para ampliar os resultados.</p><button type="button" className="button button--secondary" onClick={clearTagFilters}>Limpar filtros</button></div>}
 
-            {activeSource === 'nudevista' && (
-              <div className="builder-layout">
-                <div className="builder-fields">
-                  <div className="builder-title"><span className="step-number">A</span><div><h4>Construa sua consulta</h4><p>Sintaxe da busca avançada publicada pelo NudeVista. A consulta é montada aqui, mas não é enviada ao site.</p></div></div>
-                  <div className="fields-grid">
-                    <Field id="all-words" label="Todas estas palavras" hint="AND" value={nudeVistaQuery.allWords} onChange={(value) => updateNudeVistaField('allWords', value)} placeholder="ex.: palavra1 palavra2" />
-                    <Field id="exact-phrase" label="Frase exata" hint="com aspas" value={nudeVistaQuery.exactPhrase} onChange={(value) => updateNudeVistaField('exactPhrase', value)} placeholder="ex.: frase exata" />
-                    <Field id="any-words" label="Qualquer destas palavras" hint="separe por vírgulas" value={nudeVistaQuery.anyWords} onChange={(value) => updateNudeVistaField('anyWords', value)} placeholder="ex.: termo1, termo2" />
-                    <Field id="none-words" label="Excluir palavras" hint="separe por vírgulas" value={nudeVistaQuery.noneWords} onChange={(value) => updateNudeVistaField('noneWords', value)} placeholder="ex.: termo a excluir" />
-                    <Field id="include-site" label="Somente deste site" hint="domínio" value={nudeVistaQuery.includeSite} onChange={(value) => updateNudeVistaField('includeSite', value)} placeholder="ex.: xhamster.com" />
-                    <Field id="exclude-site" label="Excluir este site" hint="domínio" value={nudeVistaQuery.excludeSite} onChange={(value) => updateNudeVistaField('excludeSite', value)} placeholder="ex.: exemplo.com" />
-                    <Field id="category" label="Categoria" hint="slug" value={nudeVistaQuery.category} onChange={(value) => updateNudeVistaField('category', value)} placeholder="ex.: straight, gay, trans" />
-                    <div className="duration-row">
-                      <Field id="longer-than" label="Duração maior que" hint="MM:SS" value={nudeVistaQuery.longerThan} onChange={(value) => updateNudeVistaField('longerThan', value)} placeholder="20:00" />
-                      <Field id="shorter-than" label="Duração menor que" hint="MM:SS" value={nudeVistaQuery.shorterThan} onChange={(value) => updateNudeVistaField('shorterThan', value)} placeholder="60:00" />
-                    </div>
-                  </div>
-                  <p className="field-note">Exemplos de operadores conforme a página oficial. A disponibilidade dos resultados e das categorias depende do próprio NudeVista.</p>
-                </div>
-
-                <aside className="query-output-panel" aria-label="Consulta pronta para copiar">
-                  <div className="output-heading"><span className="step-number">B</span><div><h4>Copie e cole</h4><p>Revise a string antes de usá-la.</p></div></div>
-                  <label className="sr-only" htmlFor="query-output">Consulta gerada para NudeVista</label>
-                  <textarea id="query-output" value={queryToCopy} readOnly rows={7} placeholder="Sua consulta aparecerá aqui." />
-                  {validationErrors.length > 0 && <ul className="validation-list" aria-label="Erros nos campos">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>}
-                  <button className="button button--primary" type="button" onClick={() => void copyQuery()} disabled={validationErrors.length > 0 || !queryToCopy}><CopyIcon /> Copiar consulta</button>
-                  <a className="button button--secondary" href={platform.href} target="_blank" rel="noopener noreferrer">Abrir busca avançada <ExternalIcon /></a>
-                  <p className="copy-notice" aria-live="polite">{copyNotice || 'A busca só acontece quando você cola e envia os campos no NudeVista.'}</p>
-                </aside>
+            {hiddenCount > 0 && rawVideos.length > 0 && <p className="filter-summary">{hiddenCount} registro(s) da página atual não são exibidos por não atenderem aos critérios Público + EXPLICIT_SEX.</p>}
+            {visibleVideos.length > 0 && (
+              <div className="video-grid">
+                {visibleVideos.map((video) => <VideoCard key={video.uuid} video={video} />)}
               </div>
             )}
 
-            {activeSource === 'pornmd' && (
-              <div className="manual-search-panel">
-                <div className="builder-title"><span className="step-number">A</span><div><h4>Busca manual</h4><p>O portal não envia a consulta. Copie os termos e pesquise na página oficial do PornMD.</p></div></div>
-                <Field id="pornmd-query" label="Termos de busca" value={plainQuery} onChange={(value) => { setPlainQuery(value); setCopyNotice('') }} placeholder="Digite palavras para sua busca" type="search" />
-                <div className="plain-query-preview">
-                  <label className="field-label" htmlFor="pornmd-query-output">Consulta pronta para copiar</label>
-                  <textarea id="pornmd-query-output" value={queryToCopy} readOnly rows={3} placeholder="Os termos digitados e as opções selecionadas aparecerão aqui." />
-                </div>
-                <div className="manual-actions">
-                  <button className="button button--primary" type="button" onClick={() => void copyQuery()} disabled={!queryToCopy}><CopyIcon /> Copiar termos</button>
-                  <a className="button button--secondary" href={platform.href} target="_blank" rel="noopener noreferrer">Abrir PornMD <ExternalIcon /></a>
-                </div>
-                <p className="copy-notice" aria-live="polite">{copyNotice || 'Cole os termos na busca do PornMD. Este portal não coleta nem replica resultados.'}</p>
+            {loadMoreError && <p className="inline-error" role="alert">{loadMoreError}</p>}
+            {canLoadMore && !error && (
+              <div className="load-more-wrap">
+                <button className="button button--secondary load-more" type="button" onClick={handleLoadMore} disabled={loadingMore}>
+                  {loadingMore ? 'Carregando…' : 'Carregar mais resultados'}
+                </button>
+                <p>Novos vídeos podem acrescentar tags à lista dinâmica.</p>
               </div>
             )}
-
-            {activeSource === 'findtubes' && (
-              <div className="legacy-panel" role="status">
-                <div className="legacy-stamp">OFFLINE</div>
-                <div className="legacy-copy"><h4>O FindTubes encerrou.</h4><p>A página oficial informa que o serviço não está mais disponível e encaminha visitantes ao PornMD. Este cartão é apenas informativo, não uma fonte independente de busca.</p></div>
-                <a className="button button--primary" href="https://www.pornmd.com/" target="_blank" rel="noopener noreferrer">Continuar no PornMD <ExternalIcon /></a>
-                <a className="legacy-link" href={platform.href} target="_blank" rel="noopener noreferrer">Ver o aviso oficial do FindTubes</a>
-              </div>
-            )}
-          </div>
+          </section>
         </section>
 
-        <section className="how-section" aria-labelledby="how-heading">
-          <div className="section-heading section-heading--compact"><div><p className="eyebrow"><span>03</span> CONTROLE NA SUA MÃO</p><h2 id="how-heading">Sem consulta escondida.</h2></div></div>
-          <div className="how-row">
-            <article><span className="how-number">01</span><h3>Monte</h3><p>Escreva os termos ou use somente os filtros documentados do NudeVista.</p></article>
-            <article><span className="how-number">02</span><h3>Copie</h3><p>A consulta fica nesta página enquanto ela estiver aberta. Nada é salvo.</p></article>
-            <article><span className="how-number">03</span><h3>Pesquise na fonte</h3><p>Abra o site oficial e cole a consulta manualmente. Resultados não voltam para o Rota.</p></article>
-          </div>
-        </section>
-
-        <section className="terms-note" aria-label="Limites e termos dos sites">
-          <div><span className="terms-icon">i</span><p><strong>Os sites aplicam suas próprias regras.</strong> Este portal não busca, copia ou exibe conteúdo. Consulte os <a href="https://www.pornmd.com/terms-of-service/" target="_blank" rel="noopener noreferrer">Termos do PornMD</a> e os <a href="https://www.nudevista.com/TOS/" target="_blank" rel="noopener noreferrer">Termos do NudeVista</a> antes de usar os destinos externos.</p></div>
-          <a className="terms-link" href="https://www.nudevista.com/advanced-search/" target="_blank" rel="noopener noreferrer">Filtros descritos pelo NudeVista <ExternalIcon /></a>
+        <section className="source-disclosure" aria-label="Origem e limitações">
+          <div className="source-disclosure__mark">i</div>
+          <div><h2>Busca agregada, vídeos de várias instâncias</h2><p>O SepiaSearch indexa instâncias PeerTube independentes. O filtro usa apenas privacidade pública e uma marcação sexual declarada; essa marcação pode estar ausente ou incorreta. A API não informa se há monetização externa. Se o player não funcionar, use o link para abrir o vídeo na instância de origem e confira as regras daquele site.</p></div>
+          <a href="https://docs.joinpeertube.org/api-rest-reference.html" target="_blank" rel="noopener noreferrer">API documentada <span aria-hidden="true">↗</span></a>
         </section>
       </main>
 
       <footer className="footer">
-        <a className="footer-brand" href="#inicio"><BrandMark /><span>ROTA</span></a>
-        <p>Consulta local · links oficiais · sem resultados internos</p>
-        <span className="footer-code">STATIC / 18+</span>
+        <a className="footer-brand" href="#top"><BrandMark /><span>ROTA SEARCH</span></a>
+        <p>Busca pública · tags do resultado · player sob demanda</p>
+        <a className="footer-link" href="https://sepiasearch.org/" target="_blank" rel="noopener noreferrer">SepiaSearch ↗</a>
       </footer>
     </div>
   )

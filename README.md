@@ -1,20 +1,32 @@
-# Portal Rota
+# Rota Search
 
-Portal estático em React, TypeScript e Vite para organizar consultas manuais a PornMD e NudeVista. Não chama APIs, não raspa páginas, não coleta nem exibe resultados. As consultas existem apenas na memória da aba.
+Portal estático em português para buscar vídeos no índice agregado SepiaSearch e refinar os resultados com tags retornadas pela API real. O layout é próprio, escuro e responsivo; não copia logotipos nem assets das instâncias.
 
-## Como usar
+## Como funciona
 
-- Em **NudeVista**, preencha os campos e revise a string gerada. Copie-a e cole-a manualmente na página oficial de busca avançada.
-- Em **PornMD**, digite palavras simples, copie-as e faça a busca na página inicial oficial.
-- **FindTubes** aparece como encerrado. A própria página informa que o serviço não está mais disponível e encaminha para PornMD.
+1. Confirme que tem 18 anos ou mais.
+2. Digite um termo e envie a busca. Só então o navegador faz um `GET` para a API pública do SepiaSearch.
+3. O portal solicita registros com privacidade `Public` e conteúdo NSFW; localmente, só exibe vídeos com `privacy.id = 1` e o bit `2` (`EXPLICIT_SEX`) presente em `nsfwFlags`.
+4. As opções de incluir/excluir são extraídas apenas das tags dos resultados elegíveis já carregados. **Incluir** aceita vídeos que contenham ao menos uma tag selecionada; **Excluir** remove vídeos que contenham qualquer tag selecionada. Os filtros atuam localmente e podem ser limpos.
+5. Clique em **Reproduzir aqui** para carregar o iframe do host original. O link **Abrir no PeerTube de origem** permanece disponível como contingência.
 
-A sintaxe oferecida no gerador NudeVista corresponde aos exemplos publicados na [página oficial de busca avançada](https://www.nudevista.com/advanced-search/): termos que devem aparecer, frase exata, alternativas `OR`, exclusões, `from:`, `-from:`, `in:` e durações `length>`/`length<`. Não há envio automático; o portal não preenche formulários, não abre URLs de resultados, não carrega resultados externos nem afirma que operadores funcionam em PornMD.
+A lista de tags não é fixa. Cada nova busca e cada página carregada podem apresentar tags diferentes. A paginação é feita pela API do índice.
 
-A consulta é perdida ao atualizar/fechar a página. O app não usa localStorage, cookies, login, analytics, backend ou armazenamento. Clicar em um link abre um site externo, sujeito aos próprios termos e políticas.
+## Limitações importantes
 
-Em PornMD e NudeVista, o painel **Palavras-chave** permite selecionar várias opções da lista fornecida pelo usuário, filtrá-las por texto e removê-las individualmente ou limpar a seleção. Os termos selecionados entram na consulta como palavras-chave comuns; não são filtros oficiais das plataformas. O portal não inicia buscas nem verifica os resultados dessas opções.
+SepiaSearch é um índice de várias instâncias PeerTube, não o host dos vídeos. O portal filtra para vídeos marcados como públicos e com a flag sexual explícita. Essa flag é declarada na origem e pode estar ausente ou incorreta; nem todo conteúdo adulto será encontrado e a classificação não é certificação independente.
 
-## Build
+A API não fornece um campo confiável de preço/paywall. `Public` significa visibilidade pública segundo PeerTube, mas não permite detectar links de apoio pagos, plugins ou regras adicionais da instância. Por isso o portal não garante que qualquer referência externa seja gratuita; ele não cobra nem intermedeia pagamentos. Se um player não carregar, confira o acesso e as regras na página original.
+
+O termo digitado é enviado ao SepiaSearch somente ao enviar a busca. O player só se conecta à instância de origem quando o usuário o abre. Termos, tags e resultados ficam em memória e não são gravados em cookies, `localStorage`, URL, conta ou banco de dados. O portal não usa login, backend, chaves privadas, analytics próprios ou fontes externas.
+
+## Fontes oficiais
+
+- [SepiaSearch](https://sepiasearch.org/) — índice agregado PeerTube.
+- [Referência REST do PeerTube](https://docs.joinpeertube.org/api-rest-reference.html) — busca, privacidade pública e flags NSFW.
+- [PeerTube Embed Player](https://docs.joinpeertube.org/api/embed-player) — players incorporados.
+
+## Desenvolvimento e build
 
 Requer Node.js 22 ou compatível e pnpm 11.
 
@@ -24,8 +36,4 @@ pnpm dev
 pnpm build
 ```
 
-A build de produção é criada em `docs/` com caminhos relativos e publicada pelo GitHub Pages a partir de `main/docs`. O repositório público de hospedagem é [rota-search-portal](https://github.com/andressa2999/rota-search-portal), com snapshot limpo no commit `7cc6ec81d5d7ab4e7ec76314183c7762cfd625c3`, sem o histórico do protótipo PeerTube. O site publicado está disponível em [andressa2999.github.io/rota-search-portal](https://andressa2999.github.io/rota-search-portal/). O repositório canônico do projeto continua gerenciado pelo Manus.
-
-## Restrições das fontes
-
-Os Termos do PornMD proíbem scraping e redistribuição sem autorização escrita prévia e processos para monitorar ou reproduzir o site/material. Os Termos do NudeVista proíbem bots, scrapers e ferramentas automatizadas de acessar ou copiar o serviço. Este projeto evita essas ações e fornece apenas composição local e navegação manual; isso não é uma autorização para outras formas de integração. Consulte os termos oficiais de [PornMD](https://www.pornhub.com/terms-of-service/) e [NudeVista](https://www.nudevista.com/TOS/).
+A build estática é gerada em `docs/`, com caminhos relativos, para GitHub Pages configurado em `main/docs`. O site publicado está em [andressa2999.github.io/rota-search-portal](https://andressa2999.github.io/rota-search-portal/). O projeto canônico permanece no Manus; o repositório público é um snapshot de hospedagem.
