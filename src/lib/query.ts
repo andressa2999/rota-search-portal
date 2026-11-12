@@ -57,7 +57,7 @@ function appendDuration(
 }
 
 export function buildPlainQuery(value: string): string {
-  return normalizeText(value).slice(0, 500)
+  return normalizeText(value)
 }
 
 export function buildNudeVistaQuery(input: NudeVistaQueryInput): QueryBuildResult {

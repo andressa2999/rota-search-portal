@@ -12,6 +12,8 @@ A sintaxe oferecida no gerador NudeVista corresponde aos exemplos publicados na 
 
 A consulta é perdida ao atualizar/fechar a página. O app não usa localStorage, cookies, login, analytics, backend ou armazenamento. Clicar em um link abre um site externo, sujeito aos próprios termos e políticas.
 
+Em PornMD e NudeVista, o painel **Palavras-chave** permite selecionar várias opções da lista fornecida pelo usuário, filtrá-las por texto e removê-las individualmente ou limpar a seleção. Os termos selecionados entram na consulta como palavras-chave comuns; não são filtros oficiais das plataformas. O portal não inicia buscas nem verifica os resultados dessas opções.
+
 ## Build
 
 Requer Node.js 22 ou compatível e pnpm 11.

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { PLATFORMS, type PlatformId } from './data/platforms'
+import { CategoryPicker } from './components/CategoryPicker'
 import { buildNudeVistaQuery, buildPlainQuery, type NudeVistaQueryInput } from './lib/query'
 
 const emptyNudeVistaQuery: NudeVistaQueryInput = {
@@ -71,19 +72,40 @@ function App() {
   const [activeSource, setActiveSource] = useState<PlatformId>('nudevista')
   const [plainQuery, setPlainQuery] = useState('')
   const [nudeVistaQuery, setNudeVistaQuery] = useState<NudeVistaQueryInput>(emptyNudeVistaQuery)
+  const [selectedCategoryTerms, setSelectedCategoryTerms] = useState<string[]>([])
   const [copyNotice, setCopyNotice] = useState('')
 
   const platform = PLATFORMS.find((item) => item.id === activeSource) ?? PLATFORMS[0]
-  const nudeVistaResult = useMemo(() => buildNudeVistaQuery(nudeVistaQuery), [nudeVistaQuery])
+  const selectedKeywords = selectedCategoryTerms.join(' ')
+  const nudeVistaResult = useMemo(() => buildNudeVistaQuery({
+    ...nudeVistaQuery,
+    allWords: [nudeVistaQuery.allWords, selectedKeywords].filter(Boolean).join(' '),
+  }), [nudeVistaQuery, selectedKeywords])
+  const plainQueryWithCategories = useMemo(
+    () => buildPlainQuery([plainQuery, selectedKeywords].filter(Boolean).join(' ')),
+    [plainQuery, selectedKeywords],
+  )
   const queryToCopy = activeSource === 'nudevista'
     ? nudeVistaResult.query
     : activeSource === 'pornmd'
-      ? buildPlainQuery(plainQuery)
+      ? plainQueryWithCategories
       : ''
   const validationErrors = activeSource === 'nudevista' ? nudeVistaResult.errors : []
 
   function updateNudeVistaField<K extends keyof NudeVistaQueryInput>(key: K, value: NudeVistaQueryInput[K]) {
     setNudeVistaQuery((current) => ({ ...current, [key]: value }))
+    setCopyNotice('')
+  }
+
+  function toggleCategoryTerm(item: string) {
+    setSelectedCategoryTerms((current) => current.includes(item)
+      ? current.filter((selected) => selected !== item)
+      : [...current, item])
+    setCopyNotice('')
+  }
+
+  function clearCategoryTerms() {
+    setSelectedCategoryTerms([])
     setCopyNotice('')
   }
 
@@ -167,6 +189,10 @@ function App() {
               {platform.status === 'active' && <span className="manual-badge"><span className="status-dot" /> MANUAL</span>}
             </div>
 
+            {activeSource !== 'findtubes' && (
+              <CategoryPicker selected={selectedCategoryTerms} onToggle={toggleCategoryTerm} onClear={clearCategoryTerms} />
+            )}
+
             {activeSource === 'nudevista' && (
               <div className="builder-layout">
                 <div className="builder-fields">
@@ -203,6 +229,10 @@ function App() {
               <div className="manual-search-panel">
                 <div className="builder-title"><span className="step-number">A</span><div><h4>Busca manual</h4><p>O portal não envia a consulta. Copie os termos e pesquise na página oficial do PornMD.</p></div></div>
                 <Field id="pornmd-query" label="Termos de busca" value={plainQuery} onChange={(value) => { setPlainQuery(value); setCopyNotice('') }} placeholder="Digite palavras para sua busca" type="search" />
+                <div className="plain-query-preview">
+                  <label className="field-label" htmlFor="pornmd-query-output">Consulta pronta para copiar</label>
+                  <textarea id="pornmd-query-output" value={queryToCopy} readOnly rows={3} placeholder="Os termos digitados e as opções selecionadas aparecerão aqui." />
+                </div>
                 <div className="manual-actions">
                   <button className="button button--primary" type="button" onClick={() => void copyQuery()} disabled={!queryToCopy}><CopyIcon /> Copiar termos</button>
                   <a className="button button--secondary" href={platform.href} target="_blank" rel="noopener noreferrer">Abrir PornMD <ExternalIcon /></a>
