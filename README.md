@@ -22,7 +22,7 @@ pnpm dev
 pnpm build
 ```
 
-A build de produção é criada em `docs/` com caminhos relativos, para compatibilidade com GitHub Pages a partir de `main/docs`. O repositório público de hospedagem é [rota-search-portal](https://github.com/andressa2999/rota-search-portal). Com Pages habilitado nessa fonte, a URL esperada é [andressa2999.github.io/rota-search-portal](https://andressa2999.github.io/rota-search-portal/). O repositório canônico do projeto continua gerenciado pelo Manus; o GitHub receberá um snapshot limpo, sem o histórico do protótipo PeerTube.
+A build de produção é criada em `docs/` com caminhos relativos e publicada pelo GitHub Pages a partir de `main/docs`. O repositório público de hospedagem é [rota-search-portal](https://github.com/andressa2999/rota-search-portal), com snapshot limpo no commit `7cc6ec81d5d7ab4e7ec76314183c7762cfd625c3`, sem o histórico do protótipo PeerTube. O site publicado está disponível em [andressa2999.github.io/rota-search-portal](https://andressa2999.github.io/rota-search-portal/). O repositório canônico do projeto continua gerenciado pelo Manus.
 
 ## Restrições das fontes
 
