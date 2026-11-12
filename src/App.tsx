@@ -148,28 +148,21 @@ function App() {
           <BrandMark />
           <span className="brand-name">ROTA<span> / SEARCH</span></span>
         </a>
-        <div className="topbar-meta"><span className="status-dot" /> ÍNDICE PEERTUBE · SEPIASEARCH</div>
+        <nav className="main-nav" aria-label="Navegação principal">
+          <a href="#search-section">Buscar</a>
+          <a href="#tags-area">Tags</a>
+          <a href="#video-results">Vídeos</a>
+          <a href="#source-info">Sobre</a>
+        </nav>
+        <div className="topbar-meta"><span className="status-dot" /> SEPIASEARCH <span className="topbar-age">18+</span></div>
       </header>
 
       <main id="top">
-        <section className="hero" aria-labelledby="hero-title">
-          <div className="hero-copy">
-            <p className="eyebrow"><span className="eyebrow-index">BUSCA FEDERADA</span><span className="age-pill">18+</span></p>
-            <h1 id="hero-title">Encontre vídeos.<br /><em>Refine por tags.</em></h1>
-            <p className="hero-description">Busque no índice SepiaSearch e refine os resultados pelas tags reais dos vídeos públicos sinalizados como explícitos.</p>
-          </div>
-          <div className="hero-stamp" aria-hidden="true"><span>PEER<br />TUBE</span><b>↗</b></div>
-        </section>
-
-        <section className="notice" aria-label="Aviso de conteúdo e privacidade">
-          <span className="notice-tag">18+</span>
-          <p><strong>Apenas adultos.</strong> São exibidos registros marcados como públicos e com a flag `EXPLICIT_SEX`. A consulta vai ao SepiaSearch somente quando você buscar; o player conecta à instância original apenas após clique.</p>
-        </section>
-
-        <section className="search-section" aria-labelledby="search-title">
+        <section id="search-section" className="search-section" aria-labelledby="search-title">
           <div className="search-section__heading">
-            <div><p className="eyebrow"><span className="eyebrow-index">01</span> PESQUISA</p><h2 id="search-title">O que você procura?</h2></div>
-            <span className="index-badge"><span className="status-dot" /> ÍNDICE AGREGADO</span>
+            <p className="eyebrow"><span className="eyebrow-index">BUSCA FEDERADA</span><span className="age-pill">18+</span></p>
+            <h1 id="search-title">Buscar vídeos</h1>
+            <p className="search-section__description">Pesquise no índice SepiaSearch. As tags relacionadas aparecem somente a partir dos resultados carregados.</p>
           </div>
           <form className="search-form" onSubmit={handleSearch}>
             <label className="sr-only" htmlFor="search-query">Termo de busca</label>
@@ -183,14 +176,19 @@ function App() {
               placeholder="Ex.: ruiva, redhead…"
               autoComplete="off"
             />
-            <button type="submit" disabled={loading}>{loading ? 'Buscando…' : 'Buscar vídeos'}</button>
+            <button type="submit" disabled={loading}>{loading ? 'Buscando…' : 'Buscar'}</button>
           </form>
           <p className="search-privacy-note">O termo digitado é enviado ao SepiaSearch ao tocar em Buscar. Não fica salvo neste portal.</p>
           {error && <p className="inline-error" role="alert">{error}</p>}
         </section>
 
+        <section className="notice" aria-label="Aviso de conteúdo e privacidade">
+          <span className="notice-tag">18+</span>
+          <p><strong>Apenas adultos.</strong> São exibidos registros marcados como públicos e com a flag `EXPLICIT_SEX`. A consulta vai ao SepiaSearch somente quando você buscar; o player conecta à instância original apenas após clique.</p>
+        </section>
+
         <section className="results-area" aria-label="Resultados e filtros">
-          <aside className="filters-column">
+          <aside id="tags-area" className="filters-column">
             {submittedQuery ? (
               <TagFilters
                 key={submittedQuery}
@@ -202,14 +200,14 @@ function App() {
                 onClear={clearTagFilters}
               />
             ) : (
-              <div className="filter-empty-card"><span className="filter-empty-card__number">02</span><h2>Tags dinâmicas</h2><p>Faça uma busca. As opções de incluir e excluir serão extraídas somente dos resultados elegíveis.</p></div>
+              <div className="filter-empty-card"><span className="filter-empty-card__number">TAGS</span><h2>Tags relacionadas</h2><p>Faça uma busca para gerar opções a partir dos resultados elegíveis. Nenhuma categoria fixa é exibida.</p></div>
             )}
             <div className="eligibility-note"><span aria-hidden="true">i</span><p>“Público” não informa preços externos. As regras de acesso do vídeo pertencem à instância que o hospeda.</p></div>
           </aside>
 
-          <section className="results-column" aria-labelledby="results-title">
+          <section id="video-results" className="results-column" aria-labelledby="results-title">
             <div className="results-heading">
-              <div><p className="eyebrow"><span className="eyebrow-index">03</span> RESULTADOS</p><h2 id="results-title">{submittedQuery ? `Busca: “${submittedQuery}”` : 'Vídeos públicos'}</h2></div>
+              <div><p className="eyebrow">VÍDEOS</p><h2 id="results-title">{submittedQuery ? `Busca: “${submittedQuery}”` : 'Resultados da busca'}</h2></div>
               {submittedQuery && !loading && <span className="result-count" role="status">{visibleVideos.length} exibidos · {eligibleVideos.length} elegíveis carregados</span>}
             </div>
 
@@ -241,7 +239,7 @@ function App() {
           </section>
         </section>
 
-        <section className="source-disclosure" aria-label="Origem e limitações">
+        <section id="source-info" className="source-disclosure" aria-label="Origem e limitações">
           <div className="source-disclosure__mark">i</div>
           <div><h2>Busca agregada, vídeos de várias instâncias</h2><p>O SepiaSearch indexa instâncias PeerTube independentes. O filtro usa apenas privacidade pública e uma marcação sexual declarada; essa marcação pode estar ausente ou incorreta. A API não informa se há monetização externa. Se o player não funcionar, use o link para abrir o vídeo na instância de origem e confira as regras daquele site.</p></div>
           <a href="https://docs.joinpeertube.org/api-rest-reference.html" target="_blank" rel="noopener noreferrer">API documentada <span aria-hidden="true">↗</span></a>

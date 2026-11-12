@@ -26,7 +26,7 @@ export function TagFilters({ tags, included, excluded, onInclude, onExclude, onC
         <div>
           <p className="eyebrow">REFINAR RESULTADOS</p>
           <div className="filter-panel__title-row">
-            <h2 id="tag-filter-title">Tags da busca</h2>
+            <h2 id="tag-filter-title">Tags relacionadas</h2>
             <button className="filter-panel__toggle" type="button" aria-expanded={isOpen} onClick={() => setIsOpen((open) => !open)}>
               {isOpen ? 'Ocultar' : `Ver filtros${selectedCount ? ` (${selectedCount})` : ''}`} <span aria-hidden="true">{isOpen ? '⌃' : '⌄'}</span>
             </button>
