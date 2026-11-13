@@ -13,10 +13,14 @@ interface TagFiltersProps {
 export function TagFilters({ tags, included, excluded, onInclude, onExclude, onClear }: TagFiltersProps) {
   const [filterText, setFilterText] = useState('')
   const [isOpen, setIsOpen] = useState(false)
+  const [showAllTags, setShowAllTags] = useState(false)
   const needle = filterText.trim().toLocaleLowerCase('pt-BR')
   const visibleTags = useMemo(
-    () => tags.filter((tag) => !needle || tag.name.toLocaleLowerCase('pt-BR').includes(needle)),
-    [needle, tags],
+    () => {
+      const matchingTags = tags.filter((tag) => !needle || tag.name.toLocaleLowerCase('pt-BR').includes(needle))
+      return showAllTags || needle ? matchingTags : matchingTags.slice(0, 10)
+    },
+    [needle, showAllTags, tags],
   )
   const selectedCount = included.length + excluded.length
 
@@ -24,9 +28,9 @@ export function TagFilters({ tags, included, excluded, onInclude, onExclude, onC
     <aside className={`filter-panel ${isOpen ? 'is-open' : ''}`} aria-labelledby="tag-filter-title">
       <div className="filter-panel__header">
         <div>
-          <p className="eyebrow">REFINAR RESULTADOS</p>
+          <p className="eyebrow">TOP TAGS · BUSCA ATUAL</p>
           <div className="filter-panel__title-row">
-            <h2 id="tag-filter-title">Tags relacionadas</h2>
+            <h2 id="tag-filter-title">Tags mais frequentes</h2>
             <button className="filter-panel__toggle" type="button" aria-expanded={isOpen} onClick={() => setIsOpen((open) => !open)}>
               {isOpen ? 'Ocultar' : `Ver filtros${selectedCount ? ` (${selectedCount})` : ''}`} <span aria-hidden="true">{isOpen ? '⌃' : '⌄'}</span>
             </button>
@@ -37,7 +41,7 @@ export function TagFilters({ tags, included, excluded, onInclude, onExclude, onC
         </button>
       </div>
       <div className="filter-panel__content">
-      <p className="filter-panel__intro">As tags aparecem a partir dos vídeos públicos carregados. Incluir aceita qualquer tag escolhida; excluir remove vídeos com qualquer tag escolhida.</p>
+      <p className="filter-panel__intro">As 10 tags mais frequentes nos vídeos públicos carregados aparecem primeiro. Não são tendências globais: este portal não coleta buscas de usuários. Incluir aceita qualquer tag escolhida; excluir remove vídeos com qualquer tag escolhida.</p>
 
       <div className="selected-filter-groups" aria-live="polite">
         <div className="selected-filter-group">
@@ -99,6 +103,11 @@ export function TagFilters({ tags, included, excluded, onInclude, onExclude, onC
             )
           })}
         </div>
+      )}
+      {tags.length > 10 && !needle && (
+        <button className="text-button tag-expand-button" type="button" onClick={() => setShowAllTags((current) => !current)} aria-expanded={showAllTags}>
+          {showAllTags ? 'Mostrar top 10' : `Ver todas as ${tags.length} tags`}
+        </button>
       )}
       <p className="filter-panel__footer">{tags.length} tags únicas em {tags.reduce((sum, item) => sum + item.count, 0)} ocorrências dos resultados elegíveis carregados.</p>
       </div>

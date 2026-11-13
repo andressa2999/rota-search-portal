@@ -1,6 +1,6 @@
 # Rota Search
 
-Portal estático em português para buscar vídeos no índice agregado SepiaSearch e refinar os resultados com tags retornadas pela API real. O layout é próprio, escuro e responsivo; não copia logotipos nem assets das instâncias.
+Portal estático em português para buscar vídeos no índice agregado SepiaSearch e refinar os resultados com tags retornadas pela API real. O layout é próprio, preto e vermelho, responsivo; não copia logotipos nem assets das instâncias.
 
 ## Como funciona
 
@@ -10,7 +10,7 @@ Portal estático em português para buscar vídeos no índice agregado SepiaSear
 4. As opções de incluir/excluir são extraídas apenas das tags dos resultados elegíveis já carregados. **Incluir** aceita vídeos que contenham ao menos uma tag selecionada; **Excluir** remove vídeos que contenham qualquer tag selecionada. Os filtros atuam localmente e podem ser limpos.
 5. Clique em **Reproduzir aqui** para carregar o iframe do host original. O link **Abrir no PeerTube de origem** permanece disponível como contingência.
 
-A lista de tags não é fixa. Cada nova busca e cada página carregada podem apresentar tags diferentes. A paginação é feita pela API do índice.
+A lista de tags não é fixa. O painel mostra primeiro as dez tags mais frequentes nos resultados elegíveis carregados naquela busca, com opção de expandir para ver todas; cada tag mostra em quantos resultados aparece. Não é um ranking de termos mais buscados por todas as pessoas: o portal não coleta nem guarda consultas de usuários. Cada nova busca e cada página carregada podem apresentar tags diferentes. A paginação é feita pela API do índice.
 
 ## Limitações importantes
 
