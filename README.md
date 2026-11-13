@@ -37,3 +37,8 @@ pnpm build
 ```
 
 A build estática é gerada em `docs/`, com caminhos relativos, para GitHub Pages configurado em `main/docs`. O site publicado está em [andressa2999.github.io/rota-search-portal](https://andressa2999.github.io/rota-search-portal/). O projeto canônico permanece no Manus; o repositório público é um snapshot de hospedagem.
+
+
+## Páginas legais
+
+A publicação inclui [Termos de Uso](https://andressa2999.github.io/rota-search-portal/termos.html), [Política de Privacidade](https://andressa2999.github.io/rota-search-portal/privacidade.html) e um [aviso DMCA informativo](https://andressa2999.github.io/rota-search-portal/dmca.html). O aviso DMCA não designa agente nem declara safe harbor: questões sobre vídeos devem ser dirigidas à instância PeerTube de origem; reclamações sobre arquivos hospedados pelo GitHub Pages devem seguir o processo oficial do GitHub. Os textos são informativos e devem ser revisados por profissional jurídico para avaliar a situação do operador.

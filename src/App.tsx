@@ -249,6 +249,11 @@ function App() {
       <footer className="footer">
         <a className="footer-brand" href="#top"><BrandMark /><span>ROTA SEARCH</span></a>
         <p>Busca pública · tags do resultado · player sob demanda</p>
+        <nav className="footer-legal-links" aria-label="Páginas legais">
+          <a href="./termos.html">Termos</a>
+          <a href="./privacidade.html">Privacidade</a>
+          <a href="./dmca.html">DMCA</a>
+        </nav>
         <a className="footer-link" href="https://sepiasearch.org/" target="_blank" rel="noopener noreferrer">SepiaSearch ↗</a>
       </footer>
     </div>

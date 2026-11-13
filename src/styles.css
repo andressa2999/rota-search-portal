@@ -173,8 +173,11 @@ button { color: inherit; }
 .footer-brand { gap: 7px; font: 9px var(--mono); letter-spacing: .1em; }
 .footer-brand .brand-mark { width: 23px; height: 23px; }
 .footer p { margin: 0; font-size: 8px; }
-.footer-link { margin-left: auto; color: #c2b9bc; font-size: 8px; text-decoration: none; }
-.footer-link:hover { color: var(--accent); }
+.footer-legal-links { margin-left: auto; display: flex; flex-wrap: wrap; gap: 12px; }
+.footer-legal-links a, .footer-link { color: #c2b9bc; font-size: 8px; text-decoration: none; }
+.footer-legal-links a:hover, .footer-link:hover { color: var(--accent); }
+.footer-legal-links a:focus-visible, .footer-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+.footer-link { margin-left: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .age-gate { min-height: 100vh; padding: 24px; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 0, rgba(255, 51, 79, .09), transparent 48%), var(--bg); }
@@ -240,7 +243,8 @@ button { color: inherit; }
   .source-disclosure p { font-size: 8px; }
   .footer { min-height: 60px; flex-wrap: wrap; gap: 6px 9px; padding: 10px 0; }
   .footer p { order: 3; flex-basis: 100%; }
-  .footer-link { margin-left: auto; }
+  .footer-legal-links { margin-left: auto; gap: 9px; }
+  .footer-link { margin-left: 0; }
   .age-gate { padding: 15px; }
   .age-gate__card { padding: 24px 20px; }
   .age-gate__card h1 { font-size: 27px; }

@@ -1,1 +1,1 @@
-{"routes":[{"path":"/","title":"Rota Search — Busca PeerTube"}]}
+{"routes":[{"path":"/","title":"Rota Search — Busca PeerTube"},{"path":"/termos.html","title":"Termos de Uso — Rota Search"},{"path":"/privacidade.html","title":"Política de Privacidade — Rota Search"},{"path":"/dmca.html","title":"Aviso DMCA — Rota Search"}]}
